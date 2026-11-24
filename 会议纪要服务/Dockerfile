@@ -3,14 +3,31 @@
 # 因为 tools/ 在仓库根，服务必须复用它作为唯一版式真源：
 #   cd 会议纪要服务 && docker compose build      （compose 里已写 context: ..）
 #
-# OCR 引擎：RapidOCR（ONNX 运行时），模型打包在 wheel 内，构建阶段无需下载，
-# 镜像约 600 MB（paddle 方案约 1.5 GB）。适配层 app/parse/ocr_engine.py 会自动优先用它。
+# OCR 引擎：RapidOCR（ONNX 运行时），模型打包在 wheel 内，构建阶段无需下载。
+#
+# 境内网络注意：python:3.11-slim 是 Debian，默认走 deb.debian.org 与 PyPI 官方源，
+# 实测会超时（pip Read timed out / apt 卡住）。所以下面两处都换成了国内镜像：
+#   · apt  → mirrors.aliyun.com
+#   · pip  → mirrors.aliyun.com/pypi
+# 换源后如果某个包拉不到，把 ARG 里的地址改成其它可用镜像再重建。
 
 # ---- 阶段 1：依赖 ----
 FROM python:3.11-slim AS deps
+
+# 国内 PyPI 镜像 + 放宽超时/重试（大包如 onnxruntime 约 50MB）
+ARG PIP_INDEX=https://mirrors.aliyun.com/pypi/simple/
+ARG PIP_HOST=mirrors.aliyun.com
+ENV PIP_INDEX_URL=${PIP_INDEX} \
+    PIP_TRUSTED_HOST=${PIP_HOST} \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_RETRIES=5 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
 WORKDIR /w
 COPY 会议纪要服务/requirements-core.txt 会议纪要服务/requirements-ocr-rapid.txt 会议纪要服务/requirements-server.txt ./
-RUN pip install --no-cache-dir -r requirements-server.txt
+# 缓存挂载：重建时复用已下载的 wheel，不用每次重下
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements-server.txt
 
 # ---- 阶段 2：运行 ----
 FROM python:3.11-slim
@@ -21,10 +38,19 @@ ENV PYTHONUNBUFFERED=1 \
     TOOLS_DIR=/app/app/tools \
     DATA_DIR=/data
 
-# opencv（RapidOCR 依赖）需要 libGL/libglib；中文渲染需要 CJK 字体
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1 libglib2.0-0 fonts-noto-cjk ca-certificates curl \
-    && rm -rf /var/lib/apt/lists/*
+# Debian 换阿里云源（兼容 bookworm 的 sources.list 与 trixie 的 sources.list.d/*.sources）
+ARG DEB_MIRROR=mirrors.aliyun.com
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list ]; then \
+        sed -i "s|deb.debian.org|${DEB_MIRROR}|g; s|security.debian.org|${DEB_MIRROR}|g" /etc/apt/sources.list; \
+    fi; \
+    for f in /etc/apt/sources.list.d/*.sources; do \
+        [ -e "$f" ] && sed -i "s|deb.debian.org|${DEB_MIRROR}|g; s|security.debian.org|${DEB_MIRROR}|g" "$f" || true; \
+    done; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
+        libgl1 libglib2.0-0 ca-certificates curl; \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
