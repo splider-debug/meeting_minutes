@@ -1,5 +1,12 @@
 # 服务器镜像一键安装（Dockerfile 里用 python:3.11-slim）
-# 为什么不用 requirements.txt：paddlepaddle 2.6 只到 cp312，3.13 装不了；
-# 镜像固定 3.11，因此走 paddle 2.6 + paddleocr 2.9 这条成熟线。
+#
+# 已统一到 RapidOCR：不依赖 paddle，模型打包在 wheel 里
+#   · 镜像体积从约 1.5 GB 降到约 600 MB
+#   · 不需要在构建阶段下载模型（原来要下 60MB+ 才不至于首个请求超时）
+#   · 与本机 Python 3.13 上的引擎完全一致，行为不再有两条线
+#
+# 如果要回退到 paddle 方案（Python 3.11 上可用），把下一行换成
+#   -r requirements-ocr-py311.txt
+# 并在 Dockerfile 里恢复 OCR 预热那一行。
 -r requirements-core.txt
--r requirements-ocr-py311.txt
+-r requirements-ocr-rapid.txt

@@ -88,7 +88,10 @@ TASK_TIMEOUT_SEC = int(os.environ.get("TASK_TIMEOUT_SEC", "1200"))
 IMAGE_CHUNK = int(os.environ.get("IMAGE_CHUNK", "2100"))
 IMAGE_OVERLAP = int(os.environ.get("IMAGE_OVERLAP", "120"))
 IMAGE_MAX_SIDE = int(os.environ.get("IMAGE_MAX_SIDE", "30000"))
-OCR_MIN_AGREE = float(os.environ.get("OCR_MIN_AGREE", "0.995"))
+OCR_MIN_AGREE = float(os.environ.get("OCR_MIN_AGREE", "0.95"))
+# 第二遍复核策略：auto（只查低置信度切片，默认）/ always / off
+OCR_SECOND_PASS = os.environ.get("OCR_SECOND_PASS", "auto")
+OCR_RECHECK_SCORE = float(os.environ.get("OCR_RECHECK_SCORE", "0.90"))
 OCR_SCALES = [float(x) for x in os.environ.get("OCR_SCALES", "1.0,1.2").split(",")]
 
 # 文本解码
