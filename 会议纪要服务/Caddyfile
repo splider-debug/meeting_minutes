@@ -1,5 +1,16 @@
-# 把 203.0.113.10 换成你的公网 IP；Caddy 用它当证书的 IP SAN
-https://203.0.113.10:8081 {
+# 站点地址用环境变量，IP/域名只在一处维护（.env 里的 SITE_ADDR）
+# 部署时：cp .env.example .env 后设置 SITE_ADDR=150.158.76.100（或你的域名）
+#
+# 关键：global 块里的 default_sni 不能省。
+# curl / 浏览器直接用 IP 访问时【不会发送 SNI】（RFC 6066 禁止 IP 字面量作 SNI），
+# Caddy 拿不到主机名就无法选择证书 → 握手直接失败，典型报错：
+#   OpenSSL ... error:0A000438:SSL routines::tlsv1 alert internal error
+# 指定 default_sni 后，Caddy 在客户端没发 SNI 时也能选出对应证书。
+{
+	default_sni {$SITE_ADDR:localhost}
+}
+
+https://{$SITE_ADDR:localhost}:8081 {
 	tls internal                    # 自签，浏览器会警告，点"高级→继续前往"
 
 	encode zstd gzip

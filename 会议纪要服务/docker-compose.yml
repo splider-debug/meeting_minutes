@@ -36,6 +36,9 @@ services:
     restart: unless-stopped
     depends_on:
       - app
+    environment:
+      # 证书与站点地址，来自 .env 的 SITE_ADDR（缺省用公网 IP）
+      SITE_ADDR: ${SITE_ADDR:-localhost}
     ports:
       - "8081:8081"     # 公网唯一入口（自签 HTTPS）
     volumes:
