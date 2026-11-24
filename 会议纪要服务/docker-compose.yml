@@ -12,7 +12,11 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - ./data:/data
+      # 用「命名卷」而不是 ./data 绑定挂载：
+      # 绑定挂载时宿主机目录由 Docker 以 root 创建，容器内 app(uid 10001) 无法写入，
+      # 会报 PermissionError: '/data/home'。命名卷会把镜像里 /data 的属主(10001)带过来。
+      # 想在宿主机直接看文件，见部署说明「查看/清理数据」一节。
+      - appdata:/data
     read_only: true
     tmpfs:
       - /tmp:size=1g
@@ -40,5 +44,6 @@ services:
       - caddy_config:/config
 
 volumes:
+  appdata:            # 任务数据与成品（1 小时后自动清理）
   caddy_data:
   caddy_config:

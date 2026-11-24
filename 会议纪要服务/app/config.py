@@ -2,6 +2,7 @@
 """配置与路径解析。全部可用环境变量覆盖，便于容器里改而不改代码。"""
 import os
 import pathlib
+import sys
 
 SERVICE_DIR = pathlib.Path(__file__).resolve().parent.parent
 
@@ -62,13 +63,32 @@ os.makedirs(HOME_DIR, exist_ok=True)
 os.environ["HOME"] = HOME_DIR
 os.environ["USERPROFILE"] = HOME_DIR
 
+
+def _writable_dir(preferred: str, fallback: str, label: str) -> str:
+    """尽量用 preferred；建不出来（只读文件系统、无权限）就退到 fallback。
+
+    典型场景：镜像 `read_only: true`，而 .env 里还留着 paddle 时代的
+    PADDLE_PDX_CACHE_HOME=/opt/models（不存在且不可写）→ 启动即 OSError 30。
+    """
+    for path in (preferred, fallback):
+        try:
+            os.makedirs(path, exist_ok=True)
+            if os.access(path, os.W_OK):
+                return path
+        except OSError:
+            continue
+    print("警告：%s 无可写目录（%s / %s），相关功能可能不可用" % (label, preferred, fallback),
+          file=sys.stderr)
+    return fallback
+
+
 # OCR 模型缓存：一定要落在项目内，绝不能用用户目录。
 # 原因：paddle 默认写 C:\Users\<user>\.paddlex，而某些 Windows 机器上该路径创建被拒
 # （报 WinError 5 拒绝访问），表现为"OCR 引擎初始化失败"。
-# 放在 data/models 还能与容器内的 /data/models 对齐，镜像预热后可直接复用。
-MODEL_DIR = os.environ.get("PADDLE_PDX_CACHE_HOME") or os.path.join(DATA_DIR, "models")
-os.makedirs(MODEL_DIR, exist_ok=True)
-os.environ.setdefault("PADDLE_PDX_CACHE_HOME", MODEL_DIR)
+# RapidOCR 不需要这个目录（模型在 wheel 内），paddle 引擎才用。
+MODEL_DIR = _writable_dir(os.environ.get("PADDLE_PDX_CACHE_HOME") or os.path.join(DATA_DIR, "models"),
+                          os.path.join(DATA_DIR, "models"), "OCR 模型缓存")
+os.environ["PADDLE_PDX_CACHE_HOME"] = MODEL_DIR
 os.environ.setdefault("XDG_CACHE_HOME", os.path.join(DATA_DIR, ".cache"))
 
 # paddle 自己的扩展缓存默认在 ~/.cache/paddle_extension；modelscope / huggingface 也会写用户目录。
@@ -76,9 +96,9 @@ os.environ.setdefault("XDG_CACHE_HOME", os.path.join(DATA_DIR, ".cache"))
 for _env, _sub in (("PADDLE_EXTENSION_DIR", "paddle_ext"),
                    ("MODELSCOPE_CACHE", "modelscope"),
                    ("HF_HOME", "hf")):
-    _p = os.environ.get(_env) or os.path.join(DATA_DIR, _sub)
-    os.makedirs(_p, exist_ok=True)
-    os.environ.setdefault(_env, _p)
+    _p = _writable_dir(os.environ.get(_env) or os.path.join(DATA_DIR, _sub),
+                       os.path.join(DATA_DIR, _sub), _env)
+    os.environ[_env] = _p
 
 # 限额（对应技术方案 §二 需求清单 #13）
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "50"))
