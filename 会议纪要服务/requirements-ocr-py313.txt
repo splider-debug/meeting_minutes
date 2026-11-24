@@ -1,0 +1,9 @@
+# OCR 依赖 · Python 3.13 分支（Windows 本机开发用）
+# 原因：paddlepaddle 2.6.x 没有 cp313 轮子，3.13 上只能装 paddle 3.x
+# 注意：paddleocr 3.x 的 API 与 2.x 不同，服务代码用 app/parse/ocr_engine.py 适配
+# 安装顺序（先装引擎，再装 OCR，便于定位失败）：
+#   pip install paddlepaddle==3.3.1
+#   python -c "import paddle; print(paddle.__version__)"
+#   pip install -r requirements-ocr-py313.txt
+paddlepaddle==3.3.1
+paddleocr>=3.0

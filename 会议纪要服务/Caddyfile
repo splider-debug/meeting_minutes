@@ -1,0 +1,23 @@
+# 把 203.0.113.10 换成你的公网 IP；Caddy 用它当证书的 IP SAN
+https://203.0.113.10:8081 {
+	tls internal                    # 自签，浏览器会警告，点"高级→继续前往"
+
+	encode zstd gzip
+	reverse_proxy app:8000 {
+		flush_interval -1           # SSE 必须关缓冲，否则进度会"最后一秒全出来"
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+	}
+	request_body {
+		max_size 60MB
+	}
+	log {
+		output file /data/access.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

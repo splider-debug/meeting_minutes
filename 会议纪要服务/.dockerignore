@@ -1,0 +1,14 @@
+# 构建与运行都不需要的东西一律不进镜像
+venv/
+runs/
+data/
+_test/
+_cache/
+__pycache__/
+*.pyc
+_chk.univer
+技术方案.docx
+技术方案.md
+README_M1.md
+.git/
+.gitignore

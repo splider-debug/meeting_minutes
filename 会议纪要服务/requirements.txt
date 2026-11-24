@@ -1,0 +1,4 @@
+# 本机一键安装（Python 3.13，Windows/macOS/Linux 通用）
+# 服务器镜像请用 requirements-server.txt（Python 3.11 + paddle 2.6）
+-r requirements-core.txt
+-r requirements-ocr-py313.txt

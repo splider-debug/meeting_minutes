@@ -1,0 +1,5 @@
+# 服务器镜像一键安装（Dockerfile 里用 python:3.11-slim）
+# 为什么不用 requirements.txt：paddlepaddle 2.6 只到 cp312，3.13 装不了；
+# 镜像固定 3.11，因此走 paddle 2.6 + paddleocr 2.9 这条成熟线。
+-r requirements-core.txt
+-r requirements-ocr-py311.txt

@@ -1,0 +1,4 @@
+# OCR 依赖 · Python 3.10/3.11 分支（服务器 Docker 镜像用，pip 稳定组合）
+# 服务端镜像固定 python:3.11-slim，用这一份
+paddlepaddle==2.6.2
+paddleocr==2.9.1

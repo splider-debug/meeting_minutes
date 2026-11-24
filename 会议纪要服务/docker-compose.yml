@@ -1,0 +1,40 @@
+services:
+  app:
+    build:
+      # 上下文必须是仓库根，才能把根目录的 tools/ 打进镜像（版式单一真源）
+      context: ..
+      dockerfile: 会议纪要服务/Dockerfile
+    image: meeting-svc:0.2.0-m2
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "8000"          # 只给 caddy，不映射到宿主机
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "8081:8081"     # 公网唯一入口（自签 HTTPS）
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

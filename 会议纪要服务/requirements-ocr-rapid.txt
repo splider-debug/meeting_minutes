@@ -1,0 +1,13 @@
+# OCR 依赖 · 不依赖 paddle 的方案（Python 3.13 上推荐）
+#
+# 为什么换成它：
+#   paddlepaddle 2.6 没有 cp313 轮子；paddle 3.3.1 与 paddlex 3.7.2 组合在 3.13 上
+#   会报 "json.exception.parse_error ... empty input"（推理器创建失败）。
+#   RapidOCR 走 ONNX 运行时，模型打包在 wheel 里，不写用户目录、不下载模型、无版本冲突。
+#
+# 安装（必须加 --ignore-requires-python：该包元数据标了 <3.13，但实测在 3.13 可用）：
+#   pip install --ignore-requires-python "rapidocr-onnxruntime>=1.4,<1.5"
+#
+# 装了它之后，适配层 app/parse/ocr_engine.py 会优先用它，paddle 可以留着不用。
+rapidocr-onnxruntime>=1.4,<1.5
+onnxruntime>=1.20
