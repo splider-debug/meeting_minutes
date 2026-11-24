@@ -1,10 +1,14 @@
+# 项目名必须显式指定：Compose 默认从目录名推导，
+# 而本目录名是中文（会议纪要服务），规范化后为空 → 报 "project name must not be empty"
+name: meeting_minutes
+
 services:
   app:
     build:
       # 上下文必须是仓库根，才能把根目录的 tools/ 打进镜像（版式单一真源）
       context: ..
       dockerfile: 会议纪要服务/Dockerfile
-    image: meeting-svc:0.2.0-m2
+    image: meeting-svc:0.4.0
     restart: unless-stopped
     env_file: .env
     volumes:
